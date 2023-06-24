@@ -4,9 +4,8 @@ import "./Pausable.sol";
 import "./SafeMath.sol";
 import "./SafeERC20.sol";
 import "./IProject.sol";
-import "./Governable.sol";
 
-contract Project is Governable, Pausable, IProject {
+contract Project is Ownable, Pausable, IProject {
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
 
@@ -63,27 +62,27 @@ contract Project is Governable, Pausable, IProject {
         ERC20Interface = IERC20(_receiveToken);
     }
 
-    function updateMaxCap(uint256 _maxCap) public onlyGovernor {
+    function updateMaxCap(uint256 _maxCap) public onlyOwner {
         require(_maxCap > 0, "Z1");
         maxCap = _maxCap;
     }
 
-    function updateUserMaxCap(uint256 _maxCap) public onlyGovernor {
+    function updateUserMaxCap(uint256 _maxCap) public onlyOwner {
         require(_maxCap > 0, "Z2");
         maxUserCap = _maxCap;
     }
 
-    function updateUserMinCap(uint256 _minCap) public onlyGovernor {
+    function updateUserMinCap(uint256 _minCap) public onlyOwner {
         require(_minCap > 0, "Z3");
         minUserCap = _minCap;
     }
 
-    function updateStartTime(uint256 newsaleStart) public onlyGovernor {
+    function updateStartTime(uint256 newsaleStart) public onlyOwner {
         require(block.timestamp < saleStart, "T2");
         saleStart = newsaleStart;
     }
 
-    function updateEndTime(uint256 newSaleEnd) public onlyGovernor {
+    function updateEndTime(uint256 newSaleEnd) public onlyOwner {
         require(
             newSaleEnd > saleStart && newSaleEnd > block.timestamp,
             "T3"
@@ -91,32 +90,36 @@ contract Project is Governable, Pausable, IProject {
         saleEnd = newSaleEnd;
     }
 
-    function updateTokenPrice(uint256 newPrice) public onlyGovernor {
+    function updateTokenPrice(uint256 newPrice) public onlyOwner {
+        require(block.timestamp < saleStart, "S1");
         tokenPrice = newPrice;
     }
 
-    function updateProjectOwner(address newOwner) public onlyGovernor {
-        require(projectOwner != newOwner,"OW1");
+    function updateProjectOwner(address newOwner) public onlyOwner {
+        require(block.timestamp <= saleEnd, "S2");
+        require(newOwner != address(0) && projectOwner != newOwner,"OW1");
         projectOwner = newOwner;
     }
 
 
-    function addWhiteList(address[] memory _users) public onlyGovernor {
+    function addWhiteList(address[] memory _users) public onlyOwner {
+        require(block.timestamp <= saleEnd, "S2");
         for (uint i=0; i < _users.length;i++) {
             whiteList[_users[i]] = true;
         }
     }
 
-    function removeWhiteList(address[] memory _users) public onlyGovernor {
+    function removeWhiteList(address[] memory _users) public onlyOwner {
+        require(block.timestamp <= saleEnd, "S2");
         for (uint i=0; i < _users.length;i++) {
             whiteList[_users[i]] = false;
         }
     }
-    function pause() public onlyGovernor {
+    function pause() public onlyOwner {
         _pause();
     }
 
-    function unpause() public onlyGovernor {
+    function unpause() public onlyOwner {
         _unpause();
     }
 
@@ -153,6 +156,7 @@ contract Project is Governable, Pausable, IProject {
         uint256 usdcAmount = users[msg.sender];
         require(usdcAmount > 0,"A1");
         uint256 claimTokensAmount = usdcAmount * tokenPrice;
+        //make sure the user can claim all tokens
         IERC20(tokenAddress).safeTransferFrom(projectOwner,msg.sender,claimTokensAmount);
         uint256 tokenBalance = IERC20(tokenAddress).balanceOf(msg.sender);
         require(tokenBalance == claimTokensAmount,"T1");

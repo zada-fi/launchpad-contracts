@@ -12,4 +12,20 @@ interface IProject {
         address _receiveToken) external ;
     function addWhiteList(address[] memory _users) external ; 
     function removeWhiteList(address[] memory _users) external ;
+    function updateMaxCap(uint256 maxCap) external ;
+    function updateUserMaxCap(uint256 userMaxCap) external ;
+
+    function updateUserMinCap(uint256 userMinCap) external ;
+
+    function updateStartTime(uint256 newsaleStart) external ;
+
+    function updateEndTime(uint256 newSaleEnd) external ;
+
+    function updateTokenPrice(uint256 newPrice) external ;
+
+    function updateProjectOwner(address newOwner) external ;
+
+    function pause() external ;
+
+    function unpause() external ;
 }
