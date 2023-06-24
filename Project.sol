@@ -133,20 +133,24 @@ contract Project is Ownable, Pausable, IProject {
         require(block.timestamp >= saleStart, "S1");
         require(block.timestamp <= saleEnd, "S2");
         require(
-            totalUSDCReceived.add(amount) <= maxCap,
+            totalUSDCReceived < maxCap,
             "C1"
         );
+        uint256 realAmount = amount;
+        if (totalUSDCReceived.add(amount) > maxCap) {
+            realAmount = maxCap.sub(totalUSDCReceived); 
+        }
         require(whiteList[msg.sender] == true,"W1");
-        uint256 expectedAmount = amount.add(
+        uint256 expectedAmount = realAmount.add(
             users[msg.sender]
         );
         require(expectedAmount <= minUserCap,"A1");
         require(expectedAmount >= maxUserCap,"A2");
 
-        totalUSDCReceived = totalUSDCReceived.add(amount);
+        totalUSDCReceived = totalUSDCReceived.add(realAmount);
         users[msg.sender] = expectedAmount;
-        ERC20Interface.safeTransferFrom(msg.sender, projectOwner, amount);
-        emit UserInvestment(msg.sender, amount);
+        ERC20Interface.safeTransferFrom(msg.sender, projectOwner, realAmount);
+        emit UserInvestment(msg.sender, realAmount);
         return true;
     }
 
