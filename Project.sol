@@ -159,7 +159,7 @@ contract Project is Ownable, Pausable, IProject {
         require(whiteList[msg.sender] == true && claimedList[msg.sender] == false,"W1");
         uint256 usdcAmount = users[msg.sender];
         require(usdcAmount > 0,"A1");
-        uint256 claimTokensAmount = usdcAmount * tokenPrice;
+        uint256 claimTokensAmount = usdcAmount.mul(tokenPrice);
         //make sure the user can claim all tokens
         IERC20(tokenAddress).safeTransferFrom(projectOwner,msg.sender,claimTokensAmount);
         uint256 tokenBalance = IERC20(tokenAddress).balanceOf(msg.sender);
