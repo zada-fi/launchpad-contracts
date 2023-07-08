@@ -144,8 +144,8 @@ contract Project is Ownable, Pausable, IProject {
         uint256 expectedAmount = realAmount.add(
             users[msg.sender]
         );
-        require(expectedAmount <= minUserCap,"A1");
-        require(expectedAmount >= maxUserCap,"A2");
+        require(expectedAmount >= minUserCap,"A1");
+        require(expectedAmount <= maxUserCap,"A2");
 
         totalUSDCReceived = totalUSDCReceived.add(realAmount);
         users[msg.sender] = expectedAmount;
