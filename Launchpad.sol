@@ -7,7 +7,7 @@ import "Project.sol";
 import "Governable.sol";
 
 contract Launchpad is Governable {
-    event ProjectCreated(string indexed projectName, address project);
+    event ProjectCreated(string projectName, address project);
     mapping(string=>address) public getProjects; 
     address[] allProjects;
 
