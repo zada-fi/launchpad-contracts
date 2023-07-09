@@ -27,6 +27,7 @@ contract Project is Ownable, Pausable, IProject {
     IERC20 public ERC20Interface;
 
     event UserInvestment(address user,uint amount);
+    event UserClaim(address user,uint amount);
 
     function init (
         string memory _name,
@@ -159,12 +160,14 @@ contract Project is Ownable, Pausable, IProject {
         require(whiteList[msg.sender] == true && claimedList[msg.sender] == false,"W1");
         uint256 usdcAmount = users[msg.sender];
         require(usdcAmount > 0,"A1");
-        uint256 claimTokensAmount = usdcAmount.mul(tokenPrice);
+        uint256 receive_token_decimals = ERC20Interface.decimals();
+        uint256 claimTokensAmount = usdcAmount.div(10**receive_token_decimals).mul(tokenPrice);
         //make sure the user can claim all tokens
         IERC20(tokenAddress).safeTransferFrom(projectOwner,msg.sender,claimTokensAmount);
         uint256 tokenBalance = IERC20(tokenAddress).balanceOf(msg.sender);
         require(tokenBalance == claimTokensAmount,"T1");
         claimedList[msg.sender] = true;
+        emit UserClaim(msg.sender,claimTokensAmount);
         return true;
     }
 
