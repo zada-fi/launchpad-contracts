@@ -20,11 +20,11 @@ contract Project is Ownable, Pausable, IProject {
     uint256 public minUserCap;
     uint256 public maxUserCap;
     uint256 public tokenPrice;
+    address public receiveToken;
+    address public feeAddress;
     mapping(address=>bool) public whiteList;
     mapping(address=>uint) public users;
     mapping(address=>bool) public claimedList;
-
-    IERC20 public ERC20Interface;
 
     event UserInvestment(address user,uint amount);
     event UserClaim(address user,uint amount);
@@ -39,7 +39,8 @@ contract Project is Ownable, Pausable, IProject {
         address _tokenAddress,
         uint256 _tokenPrice,
         address _projectOwner,
-        address _receiveToken
+        address _receiveToken,
+        address _feeAddress
     ) external  {
         name = _name;
         require(_maxCap > 0, "Z1");
@@ -60,7 +61,8 @@ contract Project is Ownable, Pausable, IProject {
         tokenAddress = _tokenAddress;
         require(_tokenPrice > 0, "TK2");
         tokenPrice = _tokenPrice;
-        ERC20Interface = IERC20(_receiveToken);
+        receiveToken = _receiveToken;
+        feeAddress = _feeAddress;
     }
 
     function updateMaxCap(uint256 _maxCap) public onlyOwner {
@@ -123,7 +125,7 @@ contract Project is Ownable, Pausable, IProject {
     function unpause() public onlyOwner {
         _unpause();
     }
-
+    
 
     function buyTokens(uint256 amount)
         external
@@ -148,9 +150,9 @@ contract Project is Ownable, Pausable, IProject {
         require(expectedAmount >= minUserCap,"A1");
         require(expectedAmount <= maxUserCap,"A2");
 
+        IERC20(receiveToken).safeTransferFrom(msg.sender, address(this), realAmount);
         totalUSDCReceived = totalUSDCReceived.add(realAmount);
         users[msg.sender] = expectedAmount;
-        ERC20Interface.safeTransferFrom(msg.sender, projectOwner, realAmount);
         emit UserInvestment(msg.sender, realAmount);
         return true;
     }
@@ -160,21 +162,28 @@ contract Project is Ownable, Pausable, IProject {
         require(whiteList[msg.sender] == true && claimedList[msg.sender] == false,"W1");
         uint256 usdcAmount = users[msg.sender];
         require(usdcAmount > 0,"A1");
-        uint256 receive_token_decimals = ERC20Interface.decimals();
+        uint256 receive_token_decimals = IERC20(receiveToken).decimals();
         uint256 claimTokensAmount = usdcAmount.div(10**receive_token_decimals).mul(tokenPrice);
         //make sure the user can claim all tokens
         IERC20(tokenAddress).safeTransferFrom(projectOwner,msg.sender,claimTokensAmount);
-        uint256 tokenBalance = IERC20(tokenAddress).balanceOf(msg.sender);
-        require(tokenBalance == claimTokensAmount,"T1");
         claimedList[msg.sender] = true;
         emit UserClaim(msg.sender,claimTokensAmount);
         return true;
     }
 
+    function withdraw() external {
+        require(block.timestamp >= saleEnd, "S1");
+        require(msg.sender == projectOwner,"P1");
+        uint256 fee = totalUSDCReceived.mul(95).div(100);
+        uint256 withdrawAmount = totalUSDCReceived.sub(fee);
+        IERC20(receiveToken).safeTransfer(feeAddress,fee);
+        IERC20(receiveToken).safeTransfer(msg.sender,withdrawAmount);
+    }
+
     modifier _hasAllowance(address allower, uint256 amount) {
         // Make sure the allower has provided the right allowance.
         // ERC20Interface = IERC20(tokenAddress);
-        uint256 ourAllowance = ERC20Interface.allowance(allower, address(this));
+        uint256 ourAllowance = IERC20(receiveToken).allowance(allower, address(this));
         require(amount <= ourAllowance, "M1");
         _;
     }

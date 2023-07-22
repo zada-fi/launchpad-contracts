@@ -9,7 +9,9 @@ interface IProject {
         address _tokenAddress,
         uint256 _tokenPrice,
         address _projectOwner,
-        address _receiveToken) external ;
+        address _receiveToke,
+        address _feeAddress
+        ) external ;
     function addWhiteList(address[] memory _users) external ; 
     function removeWhiteList(address[] memory _users) external ;
     function updateMaxCap(uint256 maxCap) external ;

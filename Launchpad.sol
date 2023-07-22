@@ -28,7 +28,7 @@ contract Launchpad is Governable {
         assembly {
             project := create2(0, add(bytecode, 32), mload(bytecode), salt)
         }
-        IProject(project).init(_name,_maxCap,_saleStart,_saleEnd,_minUserCap,_maxUserCap,_tokenAddress,_tokenPrice,_projectOwner,_receiveToken);
+        IProject(project).init(_name,_maxCap,_saleStart,_saleEnd,_minUserCap,_maxUserCap,_tokenAddress,_tokenPrice,_projectOwner,_receiveToken,_msgSender());
         getProjects[_name] = project;
         allProjects.push(project);
         emit ProjectCreated(_name,project);
