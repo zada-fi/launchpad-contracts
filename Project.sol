@@ -133,14 +133,14 @@ contract Project is Ownable, Pausable, IProject {
     {
         require(block.timestamp >= saleStart, "S1");
         require(block.timestamp <= saleEnd, "S2");
-        require(
-            totalUSDCReceived < maxCap,
-            "C1"
-        );
+        // require(
+        //     totalUSDCReceived < maxCap,
+        //     "C1"
+        // );
         uint256 realAmount = amount;
-        if (totalUSDCReceived.add(amount) > maxCap) {
-            realAmount = maxCap.sub(totalUSDCReceived); 
-        }
+        // if (totalUSDCReceived.add(amount) > maxCap) {
+        //     realAmount = maxCap.sub(totalUSDCReceived); 
+        // }
         require(whiteList[msg.sender] == true,"W1");
         uint256 expectedAmount = realAmount.add(
             users[msg.sender]
@@ -148,9 +148,9 @@ contract Project is Ownable, Pausable, IProject {
         require(expectedAmount >= minUserCap,"A1");
         require(expectedAmount <= maxUserCap,"A2");
 
+        ERC20Interface.safeTransferFrom(msg.sender, projectOwner, realAmount);
         totalUSDCReceived = totalUSDCReceived.add(realAmount);
         users[msg.sender] = expectedAmount;
-        ERC20Interface.safeTransferFrom(msg.sender, projectOwner, realAmount);
         emit UserInvestment(msg.sender, realAmount);
         return true;
     }
@@ -164,8 +164,6 @@ contract Project is Ownable, Pausable, IProject {
         uint256 claimTokensAmount = usdcAmount.div(10**receive_token_decimals).mul(tokenPrice);
         //make sure the user can claim all tokens
         IERC20(tokenAddress).safeTransferFrom(projectOwner,msg.sender,claimTokensAmount);
-        uint256 tokenBalance = IERC20(tokenAddress).balanceOf(msg.sender);
-        require(tokenBalance == claimTokensAmount,"T1");
         claimedList[msg.sender] = true;
         emit UserClaim(msg.sender,claimTokensAmount);
         return true;
