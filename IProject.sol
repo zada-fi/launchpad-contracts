@@ -1,9 +1,9 @@
 interface IProject {
     struct ProjectInfo {
         uint256 maxCap;
-        uint64 preSaleStart;
-        uint64 preSaleEnd;
-        uint64 pubSaleEnd;
+        uint256 preSaleStart;
+        uint256 preSaleEnd;
+        uint256 pubSaleEnd;
         uint256 minUserCap;
         uint256 maxUserCap;
         address tokenAddress;
@@ -21,10 +21,10 @@ interface IProject {
 
     function updateUserMinCap(uint256 userMinCap) external ;
 
-    function updatePreStartTime(uint64 newsaleStart) external ;
+    function updatePreStartTime(uint256 newsaleStart) external ;
 
-    function updatePreEndTime(uint64 newSaleEnd) external ;
-    function updatePubEndTime(uint64 newSaleEnd) external ;
+    function updatePreEndTime(uint256 newSaleEnd) external ;
+    function updatePubEndTime(uint256 newSaleEnd) external ;
     function updateTokenPrice(uint256 newPrice) external ;
 
     function updateProjectOwner(address newOwner) external ;

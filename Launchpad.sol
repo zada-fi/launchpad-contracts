@@ -2,7 +2,21 @@
 import "Ownable.sol";
 import "IProject.sol";
 import "Governable.sol";
-contract Launchpad is Governable {
+import "Storage.sol";
+import "Project.sol";
+contract Launchpad is Governable,Storage {
+    function createProject(string memory _name,IProject.ProjectInfo memory _project) onlyGovernor external returns (address project)  {
+        require(getProjects[_name] == address(0),'L1');
+        bytes memory bytecode = type(Project).creationCode;
+        bytes32 salt = keccak256(abi.encodePacked(_name, _project.preSaleStart,_project.pubSaleEnd));
+        assembly {
+            project := create2(0, add(bytecode, 32), mload(bytecode), salt)
+        }
+        IProject(project).init(_name,_project);
+        getProjects[_name] = project;
+        allProjects.push(project);
+        emit ProjectCreated(_name,project);
+    }
     function addWhiteList(address project,address[] memory users) public onlyGovernor {
         IProject(project).addWhiteList(users);
     }
@@ -23,15 +37,15 @@ contract Launchpad is Governable {
         IProject(project).updateUserMinCap(userMinCap);
     }
 
-    function updatePreStartTime(address project,uint64 newsaleStart) public onlyGovernor {
+    function updatePreStartTime(address project,uint256 newsaleStart) public onlyGovernor {
         IProject(project).updatePreStartTime(newsaleStart);
     }
 
-    function updatePreSaleEndTime(address project,uint64 newSaleEnd) public onlyGovernor {
+    function updatePreSaleEndTime(address project,uint256 newSaleEnd) public onlyGovernor {
         IProject(project).updatePreEndTime(newSaleEnd);
     }
 
-    function updatePubEndTime(address project,uint64 newSaleEnd) public onlyGovernor {
+    function updatePubEndTime(address project,uint256 newSaleEnd) public onlyGovernor {
         IProject(project).updatePubEndTime(newSaleEnd);
     }
 
@@ -50,5 +64,4 @@ contract Launchpad is Governable {
     function unpause(address project) public onlyGovernor {
         IProject(project).unpause();
     }
-
 }

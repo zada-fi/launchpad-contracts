@@ -11,9 +11,9 @@ contract Project is Ownable, Pausable, IProject {
 
     string public name;
     uint256 public maxCap;
-    uint64 public preSaleStart;
-    uint64 public preSaleEnd;
-    uint64 public pubSaleEnd;
+    uint256 public preSaleStart;
+    uint256 public preSaleEnd;
+    uint256 public pubSaleEnd;
     uint256 public totalUSDCReceived;
     uint256 public totalUsers;
     address public projectOwner;
@@ -75,19 +75,19 @@ contract Project is Ownable, Pausable, IProject {
         minUserCap = _minCap;
     }
 
-    function updatePreStartTime(uint64 newSaleStart) public onlyOwner {
+    function updatePreStartTime(uint256 newSaleStart) public onlyOwner {
         require(block.timestamp < preSaleStart, "T2");
         preSaleStart = newSaleStart;
     }
 
-    function updatePreEndTime(uint64 newSaleEnd) public onlyOwner {
+    function updatePreEndTime(uint256 newSaleEnd) public onlyOwner {
         require(
             newSaleEnd > preSaleStart && newSaleEnd > block.timestamp,
             "T3"
         );
         preSaleEnd = newSaleEnd;
     }
-    function updatePubEndTime(uint64 newSaleEnd) public onlyOwner {
+    function updatePubEndTime(uint256 newSaleEnd) public onlyOwner {
         require(
             newSaleEnd > preSaleEnd && newSaleEnd > block.timestamp,
             "T3"
@@ -135,20 +135,17 @@ contract Project is Ownable, Pausable, IProject {
         _unpause();
     }
 
-    function buyTokens(uint256 amount,bool _preSale)
+    function buyTokens(uint256 amount)
         external
         whenNotPaused
         _hasAllowance(msg.sender, amount)
         returns (bool)
     {
-        if (_preSale) {
-            require(block.timestamp >= preSaleStart, "S1");
-            require(block.timestamp <= preSaleEnd, "S2");
-            require(whiteList[msg.sender] == true,"W1");
-        } else {
-            require(block.timestamp > preSaleEnd, "S1");
-            require(block.timestamp <= pubSaleEnd, "S2");
-        }
+        require(block.timestamp >= preSaleStart && block.timestamp <= pubSaleEnd,"T3");
+        if (block.timestamp >= preSaleStart && block.timestamp <= preSaleEnd){
+            require(whiteList[msg.sender] == true,"W1"); 
+        } 
+
         uint256 expectedAmount = amount.add(
             users[msg.sender]
         );
@@ -163,8 +160,8 @@ contract Project is Ownable, Pausable, IProject {
     }
     
     function claimTokens() external whenNotPaused returns (bool){
-        require(block.timestamp >= pubSaleEnd, "S1");
-        require(whiteList[msg.sender] == true && claimedList[msg.sender] == false,"W1");
+        require(block.timestamp > pubSaleEnd, "S1");
+        require(claimedList[msg.sender] == false,"W1");
         uint256 usdcAmount = users[msg.sender];
         require(usdcAmount > 0,"A1");
         uint256 receive_token_decimals = IERC20(receiveToken).decimals();
