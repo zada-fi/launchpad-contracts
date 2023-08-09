@@ -1,15 +1,19 @@
 interface IProject {
-    function init(
-        string memory _name,
-        uint256 _maxCap,
-        uint256 _saleStart,
-        uint256 _saleEnd,
-        uint256 _minUserCap,
-        uint256 _maxUserCap,
-        address _tokenAddress,
-        uint256 _tokenPrice,
-        address _projectOwner,
-        address _receiveToken) external ;
+    struct ProjectInfo {
+        uint256 maxCap;
+        uint64 preSaleStart;
+        uint64 preSaleEnd;
+        uint64 pubSaleEnd;
+        uint256 minUserCap;
+        uint256 maxUserCap;
+        address tokenAddress;
+        uint256 tokenPrice;
+        address projectOwner;
+        address receiveToken;
+        uint16  maxWhiteListLen;
+    }
+    
+    function init(string memory _name,ProjectInfo memory project) external ;
     function addWhiteList(address[] memory _users) external ; 
     function removeWhiteList(address[] memory _users) external ;
     function updateMaxCap(uint256 maxCap) external ;
@@ -17,10 +21,10 @@ interface IProject {
 
     function updateUserMinCap(uint256 userMinCap) external ;
 
-    function updateStartTime(uint256 newsaleStart) external ;
+    function updatePreStartTime(uint64 newsaleStart) external ;
 
-    function updateEndTime(uint256 newSaleEnd) external ;
-
+    function updatePreEndTime(uint64 newSaleEnd) external ;
+    function updatePubEndTime(uint64 newSaleEnd) external ;
     function updateTokenPrice(uint256 newPrice) external ;
 
     function updateProjectOwner(address newOwner) external ;

@@ -11,8 +11,9 @@ contract Project is Ownable, Pausable, IProject {
 
     string public name;
     uint256 public maxCap;
-    uint256 public saleStart;
-    uint256 public saleEnd;
+    uint64 public preSaleStart;
+    uint64 public preSaleEnd;
+    uint64 public pubSaleEnd;
     uint256 public totalUSDCReceived;
     uint256 public totalUsers;
     address public projectOwner;
@@ -20,47 +21,43 @@ contract Project is Ownable, Pausable, IProject {
     uint256 public minUserCap;
     uint256 public maxUserCap;
     uint256 public tokenPrice;
+    uint16  public whiteListLen; 
+    uint16  public maxWhiteListLen; 
+    address public receiveToken;
     mapping(address=>bool) public whiteList;
     mapping(address=>uint) public users;
     mapping(address=>bool) public claimedList;
 
-    IERC20 public ERC20Interface;
-
     event UserInvestment(address user,uint amount);
     event UserClaim(address user,uint amount);
 
-    function init (
-        string memory _name,
-        uint256 _maxCap,
-        uint256 _saleStart,
-        uint256 _saleEnd,
-        uint256 _minUserCap,
-        uint256 _maxUserCap,
-        address _tokenAddress,
-        uint256 _tokenPrice,
-        address _projectOwner,
-        address _receiveToken
-    ) external  {
+    error MaxWhiteListLenLimit();
+
+    function init (string memory _name,ProjectInfo memory project) external  {
         name = _name;
-        require(_maxCap > 0, "Z1");
-        maxCap = _maxCap;
-        require(_minUserCap > 0, "Z2");
-        minUserCap = _minUserCap;
-        require(_maxUserCap > 0, "Z3");
-        maxUserCap = _maxUserCap;
+        require(project.maxCap > 0, "Z1");
+        maxCap = project.maxCap;
+        require(project.minUserCap > 0, "Z2");
+        minUserCap = project.minUserCap;
+        require(project.maxUserCap > 0, "Z3");
+        maxUserCap = project.maxUserCap;
         require(
-            _saleStart > block.timestamp && _saleEnd > _saleStart,
+            project.preSaleStart > block.timestamp && project.preSaleEnd > project.preSaleStart && project.pubSaleEnd > project.preSaleEnd,
             "T1"
         );
-        saleStart = _saleStart;
-        saleEnd = _saleEnd;
-        require(_projectOwner != address(0), "O1");
-        projectOwner = _projectOwner;
-        require(_tokenAddress != address(0), "TK1");
-        tokenAddress = _tokenAddress;
-        require(_tokenPrice > 0, "TK2");
-        tokenPrice = _tokenPrice;
-        ERC20Interface = IERC20(_receiveToken);
+
+        preSaleStart = project.preSaleStart;
+        preSaleEnd = project.preSaleEnd;
+        pubSaleEnd = project.pubSaleEnd;
+        maxWhiteListLen = project.maxWhiteListLen;
+        require(project.projectOwner != address(0), "O1");
+        projectOwner = project.projectOwner;
+        require(project.tokenAddress != address(0), "TK1");
+        tokenAddress = project.tokenAddress;
+        require(project.tokenPrice > 0, "TK2");
+        tokenPrice = project.tokenPrice;
+        receiveToken = project.receiveToken;
+        whiteListLen = project.maxWhiteListLen;
     }
 
     function updateMaxCap(uint256 _maxCap) public onlyOwner {
@@ -78,43 +75,57 @@ contract Project is Ownable, Pausable, IProject {
         minUserCap = _minCap;
     }
 
-    function updateStartTime(uint256 newsaleStart) public onlyOwner {
-        require(block.timestamp < saleStart, "T2");
-        saleStart = newsaleStart;
+    function updatePreStartTime(uint64 newSaleStart) public onlyOwner {
+        require(block.timestamp < preSaleStart, "T2");
+        preSaleStart = newSaleStart;
     }
 
-    function updateEndTime(uint256 newSaleEnd) public onlyOwner {
+    function updatePreEndTime(uint64 newSaleEnd) public onlyOwner {
         require(
-            newSaleEnd > saleStart && newSaleEnd > block.timestamp,
+            newSaleEnd > preSaleStart && newSaleEnd > block.timestamp,
             "T3"
         );
-        saleEnd = newSaleEnd;
+        preSaleEnd = newSaleEnd;
+    }
+    function updatePubEndTime(uint64 newSaleEnd) public onlyOwner {
+        require(
+            newSaleEnd > preSaleEnd && newSaleEnd > block.timestamp,
+            "T3"
+        );
+        pubSaleEnd = newSaleEnd;
     }
 
     function updateTokenPrice(uint256 newPrice) public onlyOwner {
-        require(block.timestamp < saleStart, "S1");
+        require(block.timestamp < pubSaleEnd, "S1");
         tokenPrice = newPrice;
     }
 
     function updateProjectOwner(address newOwner) public onlyOwner {
-        require(block.timestamp <= saleEnd, "S2");
+        require(block.timestamp <= pubSaleEnd, "S2");
         require(newOwner != address(0) && projectOwner != newOwner,"OW1");
         projectOwner = newOwner;
     }
 
 
     function addWhiteList(address[] memory _users) public onlyOwner {
-        require(block.timestamp <= saleEnd, "S2");
+        require(block.timestamp <= preSaleEnd, "S2");
+        require(whiteListLen <= maxWhiteListLen, "W2");
         for (uint i=0; i < _users.length;i++) {
-            whiteList[_users[i]] = true;
+            whiteListLen++;
+            if (whiteListLen > maxWhiteListLen) {
+                break;
+            }
+            whiteList[_users[i]] = true;         
         }
     }
 
     function removeWhiteList(address[] memory _users) public onlyOwner {
-        require(block.timestamp <= saleEnd, "S2");
+        require(block.timestamp <= preSaleEnd, "S2");
         for (uint i=0; i < _users.length;i++) {
             whiteList[_users[i]] = false;
+            whiteListLen--;
         }
+
     }
     function pause() public onlyOwner {
         _pause();
@@ -124,43 +135,39 @@ contract Project is Ownable, Pausable, IProject {
         _unpause();
     }
 
-
-    function buyTokens(uint256 amount)
+    function buyTokens(uint256 amount,bool _preSale)
         external
         whenNotPaused
         _hasAllowance(msg.sender, amount)
         returns (bool)
     {
-        require(block.timestamp >= saleStart, "S1");
-        require(block.timestamp <= saleEnd, "S2");
-        // require(
-        //     totalUSDCReceived < maxCap,
-        //     "C1"
-        // );
-        uint256 realAmount = amount;
-        // if (totalUSDCReceived.add(amount) > maxCap) {
-        //     realAmount = maxCap.sub(totalUSDCReceived); 
-        // }
-        require(whiteList[msg.sender] == true,"W1");
-        uint256 expectedAmount = realAmount.add(
+        if (_preSale) {
+            require(block.timestamp >= preSaleStart, "S1");
+            require(block.timestamp <= preSaleEnd, "S2");
+            require(whiteList[msg.sender] == true,"W1");
+        } else {
+            require(block.timestamp > preSaleEnd, "S1");
+            require(block.timestamp <= pubSaleEnd, "S2");
+        }
+        uint256 expectedAmount = amount.add(
             users[msg.sender]
         );
         require(expectedAmount >= minUserCap,"A1");
         require(expectedAmount <= maxUserCap,"A2");
 
-        ERC20Interface.safeTransferFrom(msg.sender, projectOwner, realAmount);
-        totalUSDCReceived = totalUSDCReceived.add(realAmount);
+        IERC20(receiveToken).safeTransferFrom(msg.sender, projectOwner, amount);
+        totalUSDCReceived = totalUSDCReceived.add(amount);
         users[msg.sender] = expectedAmount;
-        emit UserInvestment(msg.sender, realAmount);
+        emit UserInvestment(msg.sender, amount);
         return true;
     }
-
+    
     function claimTokens() external whenNotPaused returns (bool){
-        require(block.timestamp >= saleEnd, "S1");
+        require(block.timestamp >= pubSaleEnd, "S1");
         require(whiteList[msg.sender] == true && claimedList[msg.sender] == false,"W1");
         uint256 usdcAmount = users[msg.sender];
         require(usdcAmount > 0,"A1");
-        uint256 receive_token_decimals = ERC20Interface.decimals();
+        uint256 receive_token_decimals = IERC20(receiveToken).decimals();
         uint256 claimTokensAmount = usdcAmount.div(10**receive_token_decimals).mul(tokenPrice);
         //make sure the user can claim all tokens
         IERC20(tokenAddress).safeTransferFrom(projectOwner,msg.sender,claimTokensAmount);
@@ -172,7 +179,7 @@ contract Project is Ownable, Pausable, IProject {
     modifier _hasAllowance(address allower, uint256 amount) {
         // Make sure the allower has provided the right allowance.
         // ERC20Interface = IERC20(tokenAddress);
-        uint256 ourAllowance = ERC20Interface.allowance(allower, address(this));
+        uint256 ourAllowance = IERC20(receiveToken).allowance(allower, address(this));
         require(amount <= ourAllowance, "M1");
         _;
     }
