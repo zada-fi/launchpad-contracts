@@ -57,7 +57,7 @@ contract Project is Ownable, Pausable, IProject {
         require(project.tokenPrice > 0, "TK2");
         tokenPrice = project.tokenPrice;
         receiveToken = project.receiveToken;
-        whiteListLen = project.maxWhiteListLen;
+        whiteListLen = 0;
     }
 
     function updateMaxCap(uint256 _maxCap) public onlyOwner {
@@ -108,8 +108,7 @@ contract Project is Ownable, Pausable, IProject {
 
 
     function addWhiteList(address[] memory _users) public onlyOwner {
-        require(block.timestamp <= preSaleEnd, "S2");
-        require(whiteListLen <= maxWhiteListLen, "W2");
+        require(block.timestamp <= preSaleEnd && whiteListLen <= maxWhiteListLen, "S2");
         for (uint i=0; i < _users.length;i++) {
             whiteListLen++;
             if (whiteListLen > maxWhiteListLen) {
@@ -120,7 +119,7 @@ contract Project is Ownable, Pausable, IProject {
     }
 
     function removeWhiteList(address[] memory _users) public onlyOwner {
-        require(block.timestamp <= preSaleEnd, "S2");
+        require(block.timestamp <= preSaleEnd && whiteListLen > 0, "S2");
         for (uint i=0; i < _users.length;i++) {
             whiteList[_users[i]] = false;
             whiteListLen--;
@@ -169,6 +168,7 @@ contract Project is Ownable, Pausable, IProject {
         //make sure the user can claim all tokens
         IERC20(tokenAddress).safeTransferFrom(projectOwner,msg.sender,claimTokensAmount);
         claimedList[msg.sender] = true;
+        users[msg.sender] = 0;
         emit UserClaim(msg.sender,claimTokensAmount);
         return true;
     }
